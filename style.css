@@ -1,0 +1,153 @@
+/*
+ * Multi-Character Expression From A Card
+ * Estilos apoyados en las variables de tema de SillyTavern (--SmartTheme*),
+ * para heredar el tema activo del usuario.
+ */
+
+/* ----------------------------------------------------------------- Escenario / sprites */
+
+#mcefac-stage {
+    position: fixed;
+    inset: 0;
+    pointer-events: none;     /* deja pasar los clics al chat */
+    overflow: hidden;
+    z-index: 0;               /* detrás de los mensajes por defecto */
+}
+
+/* En modo edición el escenario sube al frente para poder arrastrar */
+#mcefac-stage.mcefac-editing {
+    z-index: 9998;
+    pointer-events: none;
+}
+
+.mcefac-holder {
+    position: absolute;
+    bottom: 0;
+    pointer-events: none;
+    user-select: none;
+    transition: left 0.4s ease, top 0.4s ease;
+}
+
+#mcefac-stage.mcefac-editing .mcefac-holder {
+    pointer-events: auto;
+    cursor: grab;
+    outline: 2px dashed var(--SmartThemeQuoteColor, #6c8cff);
+    outline-offset: 3px;
+    border-radius: 4px;
+    transition: none;
+}
+
+#mcefac-stage.mcefac-editing .mcefac-holder.mcefac-dragging {
+    cursor: grabbing;
+    outline-style: solid;
+}
+
+.mcefac-img {
+    display: block;
+    width: auto;
+    max-width: 95vw;
+    height: 70vh;             /* sobrescrito en línea según la escala */
+    object-fit: contain;
+    pointer-events: none;
+    filter: drop-shadow(0 0 6px rgba(0, 0, 0, 0.35));
+}
+
+/* ----------------------------------------------------------------- Panel de ajustes */
+
+#mcefac-settings .mcefac-cardline {
+    margin: 6px 0;
+    opacity: 0.9;
+    font-size: 0.95em;
+}
+
+#mcefac-settings .mcefac-addrow {
+    gap: 5px;
+    align-items: center;
+    margin-bottom: 8px;
+}
+
+#mcefac-settings .mcefac-empty {
+    opacity: 0.6;
+    font-style: italic;
+    font-size: 0.9em;
+    padding: 6px 2px;
+}
+
+/* Drawer anidado por personaje */
+#mcefac-settings .mcefac-char {
+    border: 1px solid var(--SmartThemeBorderColor, rgba(255, 255, 255, 0.15));
+    border-radius: 8px;
+    margin: 6px 0;
+    padding: 0 8px;
+    background-color: var(--black30a, rgba(0, 0, 0, 0.15));
+}
+
+#mcefac-settings .mcefac-char-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 6px 0;
+}
+
+#mcefac-settings .mcefac-char-title {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+}
+
+#mcefac-settings .mcefac-char-name-display {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* El switch del header no debe arrastrar el comportamiento del drawer */
+#mcefac-settings .mcefac-switch {
+    margin: 0;
+    cursor: pointer;
+}
+
+#mcefac-settings .mcefac-field {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    margin: 8px 0;
+}
+
+#mcefac-settings .mcefac-field > span:first-child {
+    font-size: 0.85em;
+    opacity: 0.8;
+}
+
+#mcefac-settings .mcefac-upload-row,
+#mcefac-settings .mcefac-char-actions {
+    gap: 5px;
+    align-items: center;
+    flex-wrap: wrap;
+}
+
+#mcefac-settings .mcefac-upload-file {
+    flex: 1;
+    min-width: 120px;
+    font-size: 0.85em;
+}
+
+#mcefac-settings input[type="range"].mcefac-char-scale {
+    width: 100%;
+}
+
+/* Botón de acción destructiva, respetando el tema */
+#mcefac-settings .mcefac-danger {
+    color: var(--fullred, #e04a4a);
+    border-color: var(--fullred, #e04a4a);
+}
+#mcefac-settings .mcefac-danger:hover {
+    background-color: var(--fullred, #e04a4a);
+    color: #fff;
+}
+
+#mcefac-settings .flex1 {
+    flex: 1;
+    min-width: 0;
+}

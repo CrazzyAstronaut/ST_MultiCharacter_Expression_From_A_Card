@@ -1,0 +1,13 @@
+{
+    "display_name": "Multi-Character Expression From A Card",
+    "loading_order": 100,
+    "requires": [],
+    "optional": [],
+    "dependencies": [],
+    "js": "index.js",
+    "css": "style.css",
+    "author": "vicente.gerardo.r",
+    "version": "1.0.0",
+    "homePage": "https://github.com/vicente-gerardo-r/ST_MultiCharacter_Expression_From_A_Card",
+    "auto_update": true
+}
