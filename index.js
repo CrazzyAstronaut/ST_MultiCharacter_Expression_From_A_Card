@@ -243,10 +243,10 @@ function charDrawerHtml(ch) {
             <label class="mcefac-field">
                 <span>Subir sprite</span>
                 <span class="flex-container mcefac-upload-row">
-                    <input type="text" class="text_pole mcefac-upload-label" placeholder="expresión (ej. happy)">
-                    <input type="file" class="mcefac-upload-file" accept="image/*">
-                    <div class="menu_button mcefac-upload-btn" title="Subir imagen a esta subcarpeta">
-                        <i class="fa-solid fa-upload"></i>
+                    <input type="text" class="text_pole flex1 mcefac-upload-label" placeholder="expresión (ej. happy)">
+                    <input type="file" class="mcefac-upload-file" accept="image/*" hidden>
+                    <div class="menu_button mcefac-upload-btn" title="Elegir imagen y subirla a esta subcarpeta">
+                        <i class="fa-solid fa-upload"></i> Subir
                     </div>
                 </span>
             </label>
@@ -544,6 +544,23 @@ function bindGlobalHandlers() {
             ch.flip = e.target.checked;
             save();
             renderStage();
+        } else if (e.target.classList.contains('mcefac-upload-file')) {
+            const fileInput = e.target;
+            const labelInput = row.querySelector('.mcefac-upload-label');
+            const label = (labelInput.value || '').trim();
+            const file = fileInput.files && fileInput.files[0];
+            if (!label || !file) { fileInput.value = ''; return; }
+            const ok = await uploadSprite(currentCard, ch.name, label, file);
+            fileInput.value = '';
+            if (ok) {
+                toast(`Sprite "${label}" subido.`, 'success');
+                labelInput.value = '';
+                ch.sprite = label;
+                await populateCharSprites(id);
+                renderStage();
+            } else {
+                toast('Error al subir el sprite.', 'error');
+            }
         }
     });
 
@@ -571,20 +588,9 @@ function bindGlobalHandlers() {
             const labelInput = row.querySelector('.mcefac-upload-label');
             const fileInput = row.querySelector('.mcefac-upload-file');
             const label = (labelInput.value || '').trim();
-            const file = fileInput.files && fileInput.files[0];
             if (!label) { toast('Escribe una etiqueta de expresión (ej. happy).', 'warning'); return; }
-            if (!file) { toast('Elige un archivo de imagen.', 'warning'); return; }
-            const ok = await uploadSprite(currentCard, ch.name, label, file);
-            if (ok) {
-                toast(`Sprite "${label}" subido.`, 'success');
-                labelInput.value = '';
-                fileInput.value = '';
-                ch.sprite = label;
-                await populateCharSprites(id);
-                renderStage();
-            } else {
-                toast('Error al subir el sprite.', 'error');
-            }
+            // Abre el explorador de archivos; la subida ocurre en el evento "change".
+            fileInput.click();
         } else if (e.target.closest('.mcefac-sprite-del')) {
             e.stopPropagation();
             const sel = row.querySelector('.mcefac-char-sprite');
