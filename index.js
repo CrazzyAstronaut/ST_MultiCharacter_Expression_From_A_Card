@@ -385,8 +385,9 @@ async function renderStage() {
             holder.style.bottom = 'auto';
             holder.style.transform = 'none';
         } else {
-            // Auto-distribución en fila, alineados al fondo
-            const leftPct = n <= 1 ? 50 : (10 + (80 * i / (n - 1)));
+            // Auto-distribución: cada personaje centrado en una franja igual del ancho.
+            // n=1 -> 50% ; n=2 -> 25%,75% ; n=3 -> ~17%,50%,83% ...
+            const leftPct = ((i + 0.5) / n) * 100;
             holder.style.left = leftPct + '%';
             holder.style.bottom = '0';
             holder.style.top = 'auto';
