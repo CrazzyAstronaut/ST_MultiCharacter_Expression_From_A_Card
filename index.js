@@ -22,6 +22,7 @@ const defaultSettings = {
     enabled: true,
     editMode: false,
     cards: {}, // { "<NombreCarta>": { characters: [ {...} ] } }
+    win: { open: false, x: null, y: null }, // ventana flotante (activar/desactivar)
 };
 
 function defaultCharacter(name) {
@@ -58,6 +59,7 @@ function getSettings() {
         if (s[k] === undefined) s[k] = structuredClone(defaultSettings[k]);
     }
     if (typeof s.cards !== 'object' || s.cards === null) s.cards = {};
+    if (typeof s.win !== 'object' || s.win === null) s.win = structuredClone(defaultSettings.win);
     return s;
 }
 
@@ -189,6 +191,10 @@ function panelHtml() {
                     Carta actual: <b id="mcefac-cardname">—</b>
                 </div>
 
+                <div id="mcefac-popout" class="menu_button mcefac-popout" title="Abrir ventana flotante para activar/desactivar sprites">
+                    <i class="fa-solid fa-window-restore"></i> Ventana flotante de activación
+                </div>
+
                 <hr class="sysHR">
 
                 <div class="flex-container mcefac-addrow">
@@ -286,8 +292,23 @@ function renderPanel() {
     container.innerHTML = roster.map(charDrawerHtml).join('');
     document.getElementById('mcefac-empty').style.display = (currentCard && roster.length === 0) ? '' : 'none';
 
+    renderWindow();
+
     // Poblar selects de sprites (async) y luego refrescar stage
     Promise.all(roster.map(ch => populateCharSprites(ch.id))).then(() => renderStage());
+}
+
+// Activa/desactiva un personaje y mantiene sincronizados panel y ventana flotante.
+function setEnabled(id, enabled) {
+    const ch = findChar(id);
+    if (!ch) return;
+    ch.enabled = !!enabled;
+    save();
+    const mainCb = document.querySelector(`#mcefac-characters .mcefac-char[data-id="${CSS.escape(id)}"] .mcefac-char-enabled`);
+    if (mainCb && mainCb.checked !== ch.enabled) mainCb.checked = ch.enabled;
+    const winCb = document.querySelector(`#mcefac-window .mcefac-win-enabled[data-id="${CSS.escape(id)}"]`);
+    if (winCb && winCb.checked !== ch.enabled) winCb.checked = ch.enabled;
+    renderStage();
 }
 
 async function populateCharSprites(charId) {
@@ -505,6 +526,8 @@ function bindGlobalHandlers() {
         toast('Sprites actualizados.', 'success');
     });
 
+    root.querySelector('#mcefac-popout').addEventListener('click', toggleWindow);
+
     // Delegación para filas de personajes
     const container = document.getElementById('mcefac-characters');
 
@@ -521,9 +544,7 @@ function bindGlobalHandlers() {
         if (!ch) return;
 
         if (e.target.classList.contains('mcefac-char-enabled')) {
-            ch.enabled = e.target.checked;
-            save();
-            renderStage();
+            setEnabled(id, e.target.checked);
         } else if (e.target.classList.contains('mcefac-char-name')) {
             const newName = (e.target.value || '').trim();
             if (newName) {
@@ -636,6 +657,121 @@ function toast(msg, type = 'info') {
     }
 }
 
+/* --------------------------------------------------------------- ventana flotante */
+
+function ensureWindow() {
+    let win = document.getElementById('mcefac-window');
+    if (win) return win;
+
+    win = document.createElement('div');
+    win.id = 'mcefac-window';
+    win.className = 'mcefac-window';
+    win.style.display = 'none';
+    win.innerHTML = `
+        <div class="mcefac-window-header">
+            <span class="mcefac-window-title">
+                <i class="fa-solid fa-users"></i>
+                <span>Sprites</span>
+                <small class="mcefac-window-card"></small>
+            </span>
+            <div class="mcefac-window-close fa-solid fa-xmark" title="Cerrar"></div>
+        </div>
+        <div class="mcefac-window-body" id="mcefac-window-list"></div>`;
+    document.body.appendChild(win);
+
+    win.querySelector('#mcefac-window-list').addEventListener('change', (e) => {
+        if (!e.target.classList.contains('mcefac-win-enabled')) return;
+        setEnabled(e.target.dataset.id, e.target.checked);
+    });
+    win.querySelector('.mcefac-window-close').addEventListener('click', closeWindow);
+    makeWindowDraggable(win.querySelector('.mcefac-window-header'), win);
+    return win;
+}
+
+function renderWindow() {
+    const win = document.getElementById('mcefac-window');
+    if (!win) return;
+    const card = win.querySelector('.mcefac-window-card');
+    if (card) card.textContent = currentCard ? `· ${currentCard}` : '';
+
+    const list = win.querySelector('#mcefac-window-list');
+    const roster = getRoster();
+    if (!roster.length) {
+        list.innerHTML = `<div class="mcefac-window-empty">Sin personajes para esta carta.</div>`;
+        return;
+    }
+    list.innerHTML = roster.map(ch => `
+        <label class="mcefac-window-row">
+            <input type="checkbox" class="mcefac-win-enabled" data-id="${escapeHtml(ch.id)}" ${ch.enabled ? 'checked' : ''}>
+            <span class="mcefac-win-name">${escapeHtml(ch.name || '(sin nombre)')}</span>
+        </label>`).join('');
+}
+
+function openWindow() {
+    const win = ensureWindow();
+    const s = getSettings();
+    win.style.display = '';
+    renderWindow();
+
+    const w = win.offsetWidth || 220;
+    const h = win.offsetHeight || 200;
+    let x = (s.win.x != null) ? s.win.x : (window.innerWidth - w - 20);
+    let y = (s.win.y != null) ? s.win.y : 80;
+    x = Math.max(0, Math.min(x, window.innerWidth - w));
+    y = Math.max(0, Math.min(y, window.innerHeight - h));
+    win.style.left = x + 'px';
+    win.style.top = y + 'px';
+
+    s.win.open = true;
+    save();
+}
+
+function closeWindow() {
+    const win = document.getElementById('mcefac-window');
+    if (win) win.style.display = 'none';
+    getSettings().win.open = false;
+    save();
+}
+
+function toggleWindow() {
+    const win = document.getElementById('mcefac-window');
+    const isOpen = win && win.style.display !== 'none';
+    if (isOpen) closeWindow();
+    else openWindow();
+}
+
+function makeWindowDraggable(header, win) {
+    header.addEventListener('pointerdown', (e) => {
+        if (e.target.closest('.mcefac-window-close')) return;
+        e.preventDefault();
+        const rect = win.getBoundingClientRect();
+        const offX = e.clientX - rect.left;
+        const offY = e.clientY - rect.top;
+        header.setPointerCapture(e.pointerId);
+
+        const onMove = (ev) => {
+            let x = ev.clientX - offX;
+            let y = ev.clientY - offY;
+            x = Math.max(0, Math.min(x, window.innerWidth - win.offsetWidth));
+            y = Math.max(0, Math.min(y, window.innerHeight - win.offsetHeight));
+            win.style.left = x + 'px';
+            win.style.top = y + 'px';
+        };
+        const onUp = () => {
+            header.removeEventListener('pointermove', onMove);
+            header.removeEventListener('pointerup', onUp);
+            header.removeEventListener('pointercancel', onUp);
+            const s = getSettings();
+            s.win.x = parseInt(win.style.left, 10) || 0;
+            s.win.y = parseInt(win.style.top, 10) || 0;
+            save();
+        };
+        header.addEventListener('pointermove', onMove);
+        header.addEventListener('pointerup', onUp);
+        header.addEventListener('pointercancel', onUp);
+    });
+}
+
 /* ----------------------------------------------------------------------- eventos */
 
 function onChatChanged() {
@@ -687,5 +823,6 @@ async function waitForContext() {
 
     currentCard = getCurrentCardName();
     renderPanel();
+    if (getSettings().win.open) openWindow();
     console.log(LOG, 'Extensión cargada.');
 })();
