@@ -42,14 +42,50 @@
     outline-style: solid;
 }
 
+/* Envoltorio que anima la entrada/salida (fade + leve desplazamiento/escala) */
+.mcefac-sprite {
+    display: block;
+    transform-origin: bottom center;
+    opacity: 1;
+    transition: opacity 0.35s ease, transform 0.35s ease;
+}
+
+/* Estado inicial al entrar y estado final al salir */
+.mcefac-holder.mcefac-entering .mcefac-sprite,
+.mcefac-holder.mcefac-leaving .mcefac-sprite {
+    opacity: 0;
+    transform: translateY(26px) scale(0.96);
+}
+
 .mcefac-img {
     display: block;
     width: auto;
     max-width: 95vw;
     height: 70vh;             /* sobrescrito en línea según la escala */
+    max-height: none;
     object-fit: contain;
     pointer-events: none;
     filter: drop-shadow(0 0 6px rgba(0, 0, 0, 0.35));
+}
+
+/* Defensa: si está la clase 'expression' (compatibilidad), no heredar estilos nativos */
+#mcefac-stage .mcefac-img.expression {
+    position: static;
+    inset: auto;
+    max-width: 95vw;
+    max-height: none;
+    margin: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .mcefac-sprite {
+        transition: none;
+    }
+    .mcefac-holder.mcefac-entering .mcefac-sprite,
+    .mcefac-holder.mcefac-leaving .mcefac-sprite {
+        opacity: 1;
+        transform: none;
+    }
 }
 
 /* ----------------------------------------------------------------- Panel de ajustes */

@@ -363,8 +363,8 @@ async function renderStage() {
     stage.classList.toggle('mcefac-editing', !!s.editMode);
 
     if (!s.enabled || !currentCard) {
-        stage.innerHTML = '';
-        stage.style.display = 'none';
+        // Animar la salida de todos los sprites en vez de borrarlos de golpe.
+        stage.querySelectorAll('.mcefac-holder').forEach(removeHolderAnimated);
         return;
     }
     stage.style.display = '';
@@ -382,23 +382,51 @@ async function renderStage() {
     }
 
     const drawable = active.filter(c => c.spritePath);
-    stage.innerHTML = '';
+    const wantIds = new Set(drawable.map(c => c.id));
+
+    // Salida animada de los que ya no deben mostrarse
+    stage.querySelectorAll('.mcefac-holder').forEach(h => {
+        if (!wantIds.has(h.dataset.id)) removeHolderAnimated(h);
+    });
 
     const n = drawable.length;
     drawable.forEach((c, i) => {
-        const holder = document.createElement('div');
-        holder.className = 'mcefac-holder';
-        holder.dataset.id = c.id;
-        holder.style.zIndex = String(c.z || i);
+        let holder = stage.querySelector(`.mcefac-holder[data-id="${CSS.escape(c.id)}"]`);
+        let isNew = false;
 
-        const img = document.createElement('img');
-        img.className = 'mcefac-img';
-        img.src = c.spritePath;
+        if (!holder) {
+            // Crear nuevo holder con estructura: holder > .mcefac-sprite > img
+            holder = document.createElement('div');
+            holder.className = 'mcefac-holder mcefac-entering';
+            holder.dataset.id = c.id;
+
+            const sprite = document.createElement('div');
+            sprite.className = 'mcefac-sprite';
+
+            const img = document.createElement('img');
+            // clase 'expression' + data-* para compatibilidad con ST_to_VisualNovel (breathing idle)
+            img.className = 'mcefac-img expression';
+            img.draggable = false;
+            sprite.appendChild(img);
+            holder.appendChild(sprite);
+
+            attachDrag(holder, c.id);
+            stage.appendChild(holder);
+            isNew = true;
+        } else if (holder.classList.contains('mcefac-leaving')) {
+            // Estaba saliendo y vuelve a activarse: lo "revivimos".
+            holder.classList.remove('mcefac-leaving');
+        }
+
+        const img = holder.querySelector('img');
+        if (img.getAttribute('src') !== c.spritePath) img.setAttribute('src', c.spritePath);
         img.alt = c.name;
-        img.draggable = false;
         img.style.height = ((Number(c.scale) || 1) * 70) + 'vh';
         img.style.transform = c.flip ? 'scaleX(-1)' : '';
-        holder.appendChild(img);
+        // data-* que detecta la extensión de respiración
+        img.dataset.spriteFolderName = c.name;
+        img.dataset.expression = c.sprite;
+        holder.style.zIndex = String(c.z || i);
 
         if (c.pos && typeof c.pos.xPct === 'number') {
             holder.style.left = c.pos.xPct + '%';
@@ -415,9 +443,35 @@ async function renderStage() {
             holder.style.transform = 'translateX(-50%)';
         }
 
-        attachDrag(holder, c.id);
-        stage.appendChild(holder);
+        if (isNew) {
+            // Quitar la clase de entrada en el siguiente frame para disparar la transición.
+            requestAnimationFrame(() => requestAnimationFrame(() => holder.classList.remove('mcefac-entering')));
+        }
     });
+}
+
+// Anima la salida de un holder y lo elimina al terminar (con respaldo por timeout).
+function removeHolderAnimated(holder) {
+    if (holder.classList.contains('mcefac-leaving')) return;
+    holder.classList.add('mcefac-leaving');
+    const sprite = holder.querySelector('.mcefac-sprite') || holder;
+
+    let finished = false;
+    const cleanup = () => {
+        sprite.removeEventListener('transitionend', onEnd);
+        clearTimeout(timer);
+    };
+    const onEnd = (e) => {
+        if (e && e.target !== sprite) return;
+        // Si fue "revivido" (ya no está saliendo), no eliminar.
+        if (!holder.classList.contains('mcefac-leaving')) { cleanup(); return; }
+        if (finished) return;
+        finished = true;
+        cleanup();
+        holder.remove();
+    };
+    const timer = setTimeout(onEnd, 600);
+    sprite.addEventListener('transitionend', onEnd);
 }
 
 function bringToFront(charId) {
