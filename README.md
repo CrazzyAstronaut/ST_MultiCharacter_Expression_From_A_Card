@@ -88,8 +88,15 @@ Es compatible con la extensión
 [ST_to_VisualNovel](https://github.com/CrazzyAstronaut/ST_to_VisualNovel), que añade animación
 de "respiración" idle a los sprites. Las imágenes de esta extensión llevan la clase `expression`
 y los atributos `data-expression` / `data-sprite-folder-name` que esa extensión busca, por lo que
-detecta y anima los sprites multi-personaje automáticamente (su re-escaneo periódico los toma en
-unos segundos). No requiere configuración extra; instala ambas y funcionan juntas.
+detecta y anima los sprites multi-personaje automáticamente. No requiere configuración extra;
+instala ambas y funcionan juntas.
+
+La integración es **inmediata** en dos sentidos: Breathing ya observa el contenedor
+`#mcefac-stage` (su `MutationObserver` reacciona al activar/cambiar sprites), y además esta
+extensión *empuja* un refresco directo a su API global (`window.__stBreathingIdleInstance
+.scheduleRefresh()`) al entrar/salir/renderizar sprites, así la respiración se aplica al momento
+sin esperar al re-escaneo periódico. Si Breathing no está instalado, ese empujón es un no-op
+inofensivo.
 
 ## Notas y límites
 

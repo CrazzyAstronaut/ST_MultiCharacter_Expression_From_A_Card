@@ -445,9 +445,25 @@ async function renderStage() {
 
         if (isNew) {
             // Quitar la clase de entrada en el siguiente frame para disparar la transición.
-            requestAnimationFrame(() => requestAnimationFrame(() => holder.classList.remove('mcefac-entering')));
+            requestAnimationFrame(() => requestAnimationFrame(() => {
+                holder.classList.remove('mcefac-entering');
+                nudgeBreathing('enter');
+            }));
         }
     });
+
+    nudgeBreathing('render');
+}
+
+// Integración con ST_to_VisualNovel (Breathing Idle): empuja un refresco inmediato
+// a través de su API global, en vez de esperar a su observer/timer. No-op si no está.
+function nudgeBreathing(reason) {
+    try {
+        const inst = window.__stBreathingIdleInstance;
+        if (inst && typeof inst.scheduleRefresh === 'function') {
+            inst.scheduleRefresh('mcefac:' + (reason || 'change'));
+        }
+    } catch (_) { /* la otra extensión no está instalada o cambió su API */ }
 }
 
 // Anima la salida de un holder y lo elimina al terminar (con respaldo por timeout).
@@ -469,6 +485,7 @@ function removeHolderAnimated(holder) {
         finished = true;
         cleanup();
         holder.remove();
+        nudgeBreathing('leave');
     };
     const timer = setTimeout(onEnd, 600);
     sprite.addEventListener('transitionend', onEnd);
