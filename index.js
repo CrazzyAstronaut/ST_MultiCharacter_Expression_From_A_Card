@@ -22,7 +22,7 @@ const defaultSettings = {
     enabled: true,
     editMode: false,
     cards: {}, // { "<NombreCarta>": { characters: [ {...} ] } }
-    win: { open: false, x: null, y: null }, // ventana flotante (activar/desactivar)
+    win: { open: false, x: null, y: null, collapsed: false }, // ventana flotante (activar/desactivar)
 };
 
 function defaultCharacter(name) {
@@ -174,7 +174,11 @@ function panelHtml() {
         <div class="inline-drawer">
             <div class="inline-drawer-toggle inline-drawer-header">
                 <b>Multi-Character Expression</b>
-                <div class="inline-drawer-icon fa-solid fa-circle-chevron-down down"></div>
+                <span class="mcefac-header-controls">
+                    <div id="mcefac-popout" class="mcefac-popout-icon fa-solid fa-window-restore"
+                        title="Abrir ventana flotante para activar/desactivar sprites"></div>
+                    <div class="inline-drawer-icon fa-solid fa-circle-chevron-down down"></div>
+                </span>
             </div>
             <div class="inline-drawer-content">
                 <label class="checkbox_label" for="mcefac-enabled">
@@ -189,10 +193,6 @@ function panelHtml() {
                 <div class="mcefac-cardline">
                     <i class="fa-solid fa-id-card"></i>
                     Carta actual: <b id="mcefac-cardname">—</b>
-                </div>
-
-                <div id="mcefac-popout" class="menu_button mcefac-popout" title="Abrir ventana flotante para activar/desactivar sprites">
-                    <i class="fa-solid fa-window-restore"></i> Ventana flotante de activación
                 </div>
 
                 <hr class="sysHR">
@@ -597,7 +597,10 @@ function bindGlobalHandlers() {
         toast('Sprites actualizados.', 'success');
     });
 
-    root.querySelector('#mcefac-popout').addEventListener('click', toggleWindow);
+    root.querySelector('#mcefac-popout').addEventListener('click', (e) => {
+        e.stopPropagation(); // no colapsar/expandir el desplegable al pulsar el icono
+        toggleWindow();
+    });
 
     // Delegación para filas de personajes
     const container = document.getElementById('mcefac-characters');
@@ -745,7 +748,10 @@ function ensureWindow() {
                 <span>Sprites</span>
                 <small class="mcefac-window-card"></small>
             </span>
-            <div class="mcefac-window-close fa-solid fa-xmark" title="Cerrar"></div>
+            <span class="mcefac-window-actions">
+                <div class="mcefac-window-collapse fa-solid fa-chevron-up" title="Plegar / desplegar"></div>
+                <div class="mcefac-window-close fa-solid fa-xmark" title="Cerrar"></div>
+            </span>
         </div>
         <div class="mcefac-window-body" id="mcefac-window-list"></div>`;
     document.body.appendChild(win);
@@ -754,7 +760,14 @@ function ensureWindow() {
         if (!e.target.classList.contains('mcefac-win-enabled')) return;
         setEnabled(e.target.dataset.id, e.target.checked);
     });
-    win.querySelector('.mcefac-window-close').addEventListener('click', closeWindow);
+    win.querySelector('.mcefac-window-close').addEventListener('click', (e) => {
+        e.stopPropagation();
+        closeWindow();
+    });
+    win.querySelector('.mcefac-window-collapse').addEventListener('click', (e) => {
+        e.stopPropagation();
+        toggleCollapse();
+    });
     makeWindowDraggable(win.querySelector('.mcefac-window-header'), win);
     return win;
 }
@@ -783,6 +796,7 @@ function openWindow() {
     const s = getSettings();
     win.style.display = '';
     renderWindow();
+    applyCollapsed(win, s.win.collapsed);
 
     const w = win.offsetWidth || 220;
     const h = win.offsetHeight || 200;
@@ -811,9 +825,28 @@ function toggleWindow() {
     else openWindow();
 }
 
+function applyCollapsed(win, collapsed) {
+    if (!win) return;
+    win.classList.toggle('mcefac-collapsed', !!collapsed);
+    const icon = win.querySelector('.mcefac-window-collapse');
+    if (icon) {
+        icon.classList.toggle('fa-chevron-up', !collapsed);
+        icon.classList.toggle('fa-chevron-down', !!collapsed);
+    }
+}
+
+function toggleCollapse() {
+    const win = document.getElementById('mcefac-window');
+    if (!win) return;
+    const s = getSettings();
+    s.win.collapsed = !s.win.collapsed;
+    applyCollapsed(win, s.win.collapsed);
+    save();
+}
+
 function makeWindowDraggable(header, win) {
     header.addEventListener('pointerdown', (e) => {
-        if (e.target.closest('.mcefac-window-close')) return;
+        if (e.target.closest('.mcefac-window-close') || e.target.closest('.mcefac-window-collapse')) return;
         e.preventDefault();
         const rect = win.getBoundingClientRect();
         const offX = e.clientX - rect.left;

@@ -188,10 +188,21 @@
     min-width: 0;
 }
 
-#mcefac-settings .mcefac-popout {
-    width: 100%;
-    justify-content: center;
-    margin: 6px 0;
+/* Controles a la derecha de la cabecera del desplegable (icono pop-out + chevron) */
+#mcefac-settings .mcefac-header-controls {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+#mcefac-settings .mcefac-popout-icon {
+    cursor: pointer;
+    opacity: 0.8;
+    transition: opacity 0.15s ease;
+}
+
+#mcefac-settings .mcefac-popout-icon:hover {
+    opacity: 1;
 }
 
 /* ----------------------------------------------------------------- Ventana flotante */
@@ -249,16 +260,36 @@
     white-space: nowrap;
 }
 
+.mcefac-window-actions {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    flex: 0 0 auto;
+}
+
+.mcefac-window-collapse,
 .mcefac-window-close {
     cursor: pointer;
     opacity: 0.8;
     padding: 2px 4px;
-    flex: 0 0 auto;
+}
+
+.mcefac-window-collapse:hover {
+    opacity: 1;
 }
 
 .mcefac-window-close:hover {
     opacity: 1;
     color: var(--fullred, #e04a4a);
+}
+
+/* Estado plegado: solo se ve la cabecera */
+.mcefac-window.mcefac-collapsed .mcefac-window-body {
+    display: none;
+}
+
+.mcefac-window.mcefac-collapsed .mcefac-window-header {
+    border-bottom: none;
 }
 
 .mcefac-window-body {
