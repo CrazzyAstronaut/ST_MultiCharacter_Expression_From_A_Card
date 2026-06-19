@@ -75,7 +75,23 @@ Repite para agregar más personajes y verlos todos a la vez. Cada carta recuerda
 
 ---
 
-## Notas y límites (v1)
+## Animaciones
+
+Al activar o desactivar un personaje, su sprite entra/sale con una pequeña animación
+(desvanecido + leve desplazamiento y escala), similar al modo grupo/visual-novel nativo de
+SillyTavern. Respeta `prefers-reduced-motion` (si tienes reducción de movimiento activada, no
+anima).
+
+## Compatibilidad con ST_to_VisualNovel (Breathing Idle)
+
+Es compatible con la extensión
+[ST_to_VisualNovel](https://github.com/CrazzyAstronaut/ST_to_VisualNovel), que añade animación
+de "respiración" idle a los sprites. Las imágenes de esta extensión llevan la clase `expression`
+y los atributos `data-expression` / `data-sprite-folder-name` que esa extensión busca, por lo que
+detecta y anima los sprites multi-personaje automáticamente (su re-escaneo periódico los toma en
+unos segundos). No requiere configuración extra; instala ambas y funcionan juntas.
+
+## Notas y límites
 
 - La elección de expresión es **manual** (tú eliges el sprite). No hay detección automática de
   emoción por personaje.
