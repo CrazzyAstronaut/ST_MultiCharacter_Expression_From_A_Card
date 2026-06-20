@@ -210,9 +210,11 @@
 .mcefac-window {
     position: fixed;
     z-index: 10000;
-    min-width: 170px;
-    max-width: 280px;
-    max-height: 60vh;
+    min-width: 190px;
+    max-width: 90vw;
+    width: 230px;
+    min-height: 90px;
+    max-height: 85vh;
     display: flex;
     flex-direction: column;
     color: var(--SmartThemeBodyColor, #eee);
@@ -223,6 +225,15 @@
     border-radius: 10px;
     box-shadow: 0 6px 24px rgba(0, 0, 0, 0.5);
     overflow: hidden;
+    /* Redimensionable desde la esquina inferior derecha, como los paneles de SillyTavern. */
+    resize: both;
+}
+
+/* Plegada: sin redimensionar (solo se ve la cabecera). */
+.mcefac-window.mcefac-collapsed {
+    resize: none;
+    min-height: 0;
+    height: auto !important;
 }
 
 .mcefac-window-header {
@@ -293,6 +304,8 @@
 }
 
 .mcefac-window-body {
+    flex: 1 1 auto;
+    min-height: 0;
     overflow-y: auto;
     padding: 4px 8px 8px;
 }
@@ -300,15 +313,25 @@
 .mcefac-window-row {
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: 6px;
     margin: 0;
     padding: 4px 4px;
-    cursor: pointer;
     border-radius: 4px;
 }
 
 .mcefac-window-row:hover {
     background-color: var(--white20a, rgba(255, 255, 255, 0.08));
+}
+
+/* Lado izquierdo: checkbox + nombre (toma el espacio sobrante). */
+.mcefac-window-toggle {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex: 1 1 auto;
+    min-width: 0;
+    margin: 0;
+    cursor: pointer;
 }
 
 .mcefac-window-row input[type="checkbox"] {
@@ -320,6 +343,16 @@
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+}
+
+/* Lado derecho: selector de sprite registrado para ese personaje. */
+.mcefac-win-sprite {
+    flex: 0 1 45%;
+    min-width: 0;
+    max-width: 50%;
+    height: auto;
+    padding: 2px 4px;
+    font-size: 0.8em;
 }
 
 .mcefac-window-empty {

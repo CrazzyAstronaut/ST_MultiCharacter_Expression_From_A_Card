@@ -75,6 +75,23 @@ Repite para agregar más personajes y verlos todos a la vez. Cada carta recuerda
 
 ---
 
+## Ventana flotante
+
+El icono **pop-out** (⧉) en la cabecera del desplegable abre una **ventana flotante** con un
+control rápido por personaje, sin tener que abrir el panel de Extensions:
+
+- Un **switch** para mostrar/ocultar a cada personaje.
+- Un **menú desplegable al lado** de cada personaje para elegir, sobre la marcha, cuál de sus
+  **sprites registrados** se muestra. Está sincronizado con el selector del panel.
+
+La ventana es **arrastrable** (por la cabecera) y **redimensionable** (esquina inferior derecha),
+igual que los paneles movibles de SillyTavern. Su posición, tamaño y estado plegado se recuerdan.
+
+Si quieres volver todo a su sitio, pulsa **"Reset UI de extensión"** en el panel de Extensions:
+restablece posición, tamaño y estado plegado de la ventana flotante a los valores por defecto.
+
+---
+
 ## Animaciones
 
 Al activar o desactivar un personaje, su sprite entra/sale con una pequeña animación

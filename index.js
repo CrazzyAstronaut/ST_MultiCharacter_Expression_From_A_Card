@@ -22,7 +22,7 @@ const defaultSettings = {
     enabled: true,
     editMode: false,
     cards: {}, // { "<NombreCarta>": { characters: [ {...} ] } }
-    win: { open: false, x: null, y: null, collapsed: false }, // ventana flotante (activar/desactivar)
+    win: { open: false, x: null, y: null, w: null, h: null, collapsed: false }, // ventana flotante (activar/desactivar)
 };
 
 function defaultCharacter(name) {
@@ -210,6 +210,15 @@ function panelHtml() {
 
                 <div id="mcefac-characters"></div>
                 <div id="mcefac-empty" class="mcefac-empty">Sin personajes para esta carta. Agrega uno arriba.</div>
+
+                <hr class="sysHR">
+
+                <div class="flex-container">
+                    <div id="mcefac-reset-ui" class="menu_button"
+                        title="Restablecer posición, tamaño y estado de la ventana flotante">
+                        <i class="fa-solid fa-rotate-left"></i> Reset UI de extensión
+                    </div>
+                </div>
             </div>
         </div>
     </div>`;
@@ -315,34 +324,52 @@ async function populateCharSprites(charId) {
     const ch = findChar(charId);
     if (!ch || !currentCard) return;
     const sprites = await listSprites(currentCard, ch.name);
-    const row = document.querySelector(`.mcefac-char[data-id="${CSS.escape(charId)}"]`);
-    if (!row) return;
-    const sel = row.querySelector('.mcefac-char-sprite');
-    if (!sel) return;
 
+    // Refrescar la url cacheada del sprite elegido (puede cambiar el ?t=) o limpiarla
+    // si ese sprite ya no existe en disco.
+    const found = ch.sprite ? sprites.find(sp => sp.label === ch.sprite) : null;
+    ch.spritePath = found ? found.path : '';
+
+    // Poblar el select del panel y el de la ventana flotante (los que existan).
+    const sels = [
+        document.querySelector(`.mcefac-char[data-id="${CSS.escape(charId)}"] .mcefac-char-sprite`),
+        document.querySelector(`#mcefac-window .mcefac-win-sprite[data-id="${CSS.escape(charId)}"]`),
+    ];
+    for (const sel of sels) {
+        if (sel) fillSpriteSelect(sel, ch, sprites);
+    }
+}
+
+// Rellena un <select> con las expresiones disponibles, marcando la elegida.
+function fillSpriteSelect(sel, ch, sprites) {
     sel.innerHTML = '';
     const empty = document.createElement('option');
     empty.value = '';
     empty.textContent = sprites.length ? '— elegir sprite —' : '(sin sprites: sube uno)';
     sel.appendChild(empty);
 
-    let matched = false;
     for (const sp of sprites) {
         const opt = document.createElement('option');
         opt.value = sp.label;
         opt.dataset.path = sp.path;
         opt.textContent = sp.label;
-        if (ch.sprite && ch.sprite === sp.label) {
-            opt.selected = true;
-            ch.spritePath = sp.path; // refrescar url (puede cambiar el ?t=)
-            matched = true;
-        }
+        if (ch.sprite && ch.sprite === sp.label) opt.selected = true;
         sel.appendChild(opt);
     }
-    if (!matched) {
-        // el sprite guardado ya no existe en disco
-        ch.spritePath = '';
-    }
+}
+
+// Cambia el sprite mostrado de un personaje y sincroniza panel, ventana y escenario.
+function setSprite(id, label, path) {
+    const ch = findChar(id);
+    if (!ch) return;
+    ch.sprite = label || '';
+    ch.spritePath = path || '';
+    save();
+    const panelSel = document.querySelector(`#mcefac-characters .mcefac-char[data-id="${CSS.escape(id)}"] .mcefac-char-sprite`);
+    if (panelSel && panelSel.value !== ch.sprite) panelSel.value = ch.sprite;
+    const winSel = document.querySelector(`#mcefac-window .mcefac-win-sprite[data-id="${CSS.escape(id)}"]`);
+    if (winSel && winSel.value !== ch.sprite) winSel.value = ch.sprite;
+    renderStage();
 }
 
 /* --------------------------------------------------------------------- stage / render */
@@ -602,6 +629,8 @@ function bindGlobalHandlers() {
         toggleWindow();
     });
 
+    root.querySelector('#mcefac-reset-ui').addEventListener('click', resetWindowUI);
+
     // Delegación para filas de personajes
     const container = document.getElementById('mcefac-characters');
 
@@ -632,10 +661,7 @@ function bindGlobalHandlers() {
             }
         } else if (e.target.classList.contains('mcefac-char-sprite')) {
             const opt = e.target.selectedOptions[0];
-            ch.sprite = e.target.value;
-            ch.spritePath = opt ? (opt.dataset.path || '') : '';
-            save();
-            renderStage();
+            setSprite(id, e.target.value, opt ? (opt.dataset.path || '') : '');
         } else if (e.target.classList.contains('mcefac-char-flip')) {
             ch.flip = e.target.checked;
             save();
@@ -757,8 +783,12 @@ function ensureWindow() {
     document.body.appendChild(win);
 
     win.querySelector('#mcefac-window-list').addEventListener('change', (e) => {
-        if (!e.target.classList.contains('mcefac-win-enabled')) return;
-        setEnabled(e.target.dataset.id, e.target.checked);
+        if (e.target.classList.contains('mcefac-win-enabled')) {
+            setEnabled(e.target.dataset.id, e.target.checked);
+        } else if (e.target.classList.contains('mcefac-win-sprite')) {
+            const opt = e.target.selectedOptions[0];
+            setSprite(e.target.dataset.id, e.target.value, opt ? (opt.dataset.path || '') : '');
+        }
     });
     win.querySelector('.mcefac-window-close').addEventListener('click', (e) => {
         e.stopPropagation();
@@ -769,6 +799,19 @@ function ensureWindow() {
         toggleCollapse();
     });
     makeWindowDraggable(win.querySelector('.mcefac-window-header'), win);
+
+    // Persistir el tamaño cuando el usuario redimensiona la ventana (esquina inferior derecha).
+    if (typeof ResizeObserver !== 'undefined') {
+        const ro = new ResizeObserver(() => {
+            if (win.style.display === 'none') return;
+            const s = getSettings();
+            if (s.win.collapsed) return; // plegada: no guardar la altura reducida
+            s.win.w = win.offsetWidth;
+            s.win.h = win.offsetHeight;
+            save();
+        });
+        ro.observe(win);
+    }
     return win;
 }
 
@@ -785,10 +828,13 @@ function renderWindow() {
         return;
     }
     list.innerHTML = roster.map(ch => `
-        <label class="mcefac-window-row">
-            <input type="checkbox" class="mcefac-win-enabled" data-id="${escapeHtml(ch.id)}" ${ch.enabled ? 'checked' : ''}>
-            <span class="mcefac-win-name">${escapeHtml(ch.name || '(sin nombre)')}</span>
-        </label>`).join('');
+        <div class="mcefac-window-row">
+            <label class="mcefac-window-toggle" title="Mostrar / ocultar este personaje">
+                <input type="checkbox" class="mcefac-win-enabled" data-id="${escapeHtml(ch.id)}" ${ch.enabled ? 'checked' : ''}>
+                <span class="mcefac-win-name">${escapeHtml(ch.name || '(sin nombre)')}</span>
+            </label>
+            <select class="text_pole mcefac-win-sprite" data-id="${escapeHtml(ch.id)}" title="Sprite mostrado"></select>
+        </div>`).join('');
 }
 
 function openWindow() {
@@ -796,7 +842,12 @@ function openWindow() {
     const s = getSettings();
     win.style.display = '';
     renderWindow();
+    getRoster().forEach(ch => populateCharSprites(ch.id));
     applyCollapsed(win, s.win.collapsed);
+
+    // Tamaño guardado por el usuario (si lo hubo); si no, el de CSS.
+    win.style.width = (s.win.w != null) ? s.win.w + 'px' : '';
+    win.style.height = (s.win.h != null) ? s.win.h + 'px' : '';
 
     const w = win.offsetWidth || 220;
     const h = win.offsetHeight || 200;
@@ -823,6 +874,28 @@ function toggleWindow() {
     const isOpen = win && win.style.display !== 'none';
     if (isOpen) closeWindow();
     else openWindow();
+}
+
+// Restablece posición, tamaño y estado plegado de la ventana flotante a sus valores por defecto.
+function resetWindowUI() {
+    const s = getSettings();
+    const wasOpen = s.win.open;
+    s.win.x = null;
+    s.win.y = null;
+    s.win.w = null;
+    s.win.h = null;
+    s.win.collapsed = false;
+    save();
+
+    const win = document.getElementById('mcefac-window');
+    if (win) {
+        win.style.width = '';
+        win.style.height = '';
+        applyCollapsed(win, false);
+    }
+    // Reabrir recoloca en la posición/tamaño por defecto (openWindow lee los settings reseteados).
+    if (wasOpen) openWindow();
+    toast('UI de la extensión restablecida.', 'success');
 }
 
 function applyCollapsed(win, collapsed) {
